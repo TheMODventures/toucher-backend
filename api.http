@@ -1,0 +1,24 @@
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "shahzad21@gmail.com",
+  "password": "abc12345",
+  "role": "user",
+  "deviceToken": "1234567890"
+}
+
+###
+
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "shahzad@gmail.com",
+  "password": "abc12345"
+#   "deviceToken": "1234567890"
+}
+
+###
+
+GET http://localhost:5018/api
