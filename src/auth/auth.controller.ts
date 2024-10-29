@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Post, Put, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Response } from 'express';
 import { GetCurrentUser } from '@src/common/decorators';
@@ -50,4 +50,24 @@ export class AuthController {
 
     generateResponse({}, 'Logged out successfully', res);
   }
+
+  @Put('/refresh-token')
+  async getRefreshToken(@Res() res: Response, @Body('refreshToken') refreshToken: string) {
+    if (!refreshToken) throwException('Refresh token is required', 400);
+
+    const user = await this.userService.findOne({ refreshToken });
+    if (!user) throwException('Invalid refresh token', 400);
+
+    const accessToken = this.authService.generateToken(user);
+    const newRefreshToken = this.authService.generateRefreshToken(user);
+
+    res.cookie('accessToken', accessToken, { httpOnly: true });
+    res.cookie('refreshToken', newRefreshToken, { httpOnly: true });
+
+    await this.userService.updateUser(user._id, { refreshToken: newRefreshToken });
+    generateResponse({ user, accessToken }, 'Access token generated successfully', res);
+  }
+
 }
+
+
