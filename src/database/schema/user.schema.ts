@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { ROLES } from '@src/common/constants';
+import { HAND, ROLES } from '@src/common/constants';
 import { hashPassword } from '@src/common/helpers';
 import { Document, ObjectId } from 'mongoose';
 import { mongoosePlugin, mongooseAggregatePlugin } from "mongoose-pagination-v2";
@@ -19,16 +19,22 @@ export class User {
   password: string;
 
   @Prop()
+  firstName: string;
+
+  @Prop()
+  lastName: string;
+
+  @Prop()
+  BowlsClub: string;
+
+  @Prop()
   phone: string;
 
   @Prop()
-  company: string;
-
-  @Prop()
-  companyAddress: string;
-
-  @Prop()
   image: string;
+
+  @Prop()
+  country: string;
 
   @Prop({ type: String, enum: Object.values(ROLES), default: ROLES.USER })
   role: ROLES;
@@ -38,6 +44,18 @@ export class User {
 
   @Prop({ required: true })
   fcmToken: string;
+
+  @Prop()
+  dob: Date;
+
+  @Prop({ type: String, enum: Object.values(HAND) })
+  hand: HAND;
+
+  @Prop({ default: true })
+  isActive: boolean;
+
+  @Prop({ default: false })
+  isDeleted: boolean;
 }
 
 export type UserDocument = User & Document;

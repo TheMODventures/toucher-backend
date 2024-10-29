@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, PaginateModel } from 'mongoose';
-import { comparePassword, generateRandomOTP, hashPassword, throwException } from '@src/common/helpers';
+import { comparePassword, generateRandomOTP, generateResponse, hashPassword, throwException } from '@src/common/helpers';
 // import { UpdateUserDTO } from './dto/update-user.dto';
 // import { fetchAllUsers } from './query/user.query';
 import { RegisterUserDTO } from '@src/auth/dto/register.dto';
@@ -16,16 +16,21 @@ import { UpdateUserDTO } from './dto/update-user.dto';
 export class UserService {
   constructor(@InjectModel(USER_MODEL) private readonly userModel: Model<UserDocument>) { }
 
-  async create(registerUserDto: RegisterUserDTO) {
+  async create(registerUserDto: RegisterUserDTO, file: Express.Multer.File) {
     try {
       const userExists = await this.userModel.findOne({ email: registerUserDto.email });
       if (userExists) throwException('User already exists', 409);
 
-      const user = await this.userModel.create(registerUserDto);
+      if (!file) throwException('Image is required', 400);
+      const userPayload = {
+        ...registerUserDto,
+        image: `uploads/${file.filename}`,
+      };
+
+      const user = await this.userModel.create(userPayload);
       return user;
     } catch (error) {
       throwException(error.message, 422);
-      console.log(error);
     }
   }
 
