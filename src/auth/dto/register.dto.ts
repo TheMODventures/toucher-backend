@@ -28,14 +28,6 @@ export class RegisterUserDTO {
   username: string;
 
   @IsString()
-  @Matches(/^\d*$/, { message: 'Phone number must contain only digits.' })
-  @MinLength(7, { message: 'Phone number must be at least 7 digits.' })
-  @MaxLength(14, { message: 'Phone number cannot exceed 14 digits.' })
-  @IsNotEmpty()
-  phone: string;
-
-
-  @IsString()
   @IsNotEmpty()
   country: string;
 

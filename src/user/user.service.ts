@@ -41,16 +41,23 @@ export class UserService {
     return user;
   }
 
-  async updateUser(user: string, updateUserDto: UpdateUserDTO) {
-    const userObj = await this.userModel.findById(user);
-    if (!userObj) throwException('User not found', 404);
+  // async updateUser(user: string, updateUserDto: UpdateUserDTO) {
+  //   const userObj = await this.userModel.findById(user);
+  //   if (!userObj) throwException('User not found', 404);
 
-    // Manually update fields
-    if (updateUserDto.username) userObj.username = updateUserDto.username;
-    if (updateUserDto.password) userObj.password = updateUserDto.password;
+  //   // Manually update fields
+  //   if (updateUserDto.username) userObj.username = updateUserDto.username;
+  //   if (updateUserDto.password) userObj.password = updateUserDto.password;
 
-    // Save the user to trigger pre-save hooks like password hashing
-    const updatedUser = await userObj.save();
+  //   // Save the user to trigger pre-save hooks like password hashing
+  //   const updatedUser = await userObj.save();
+  //   if (!updatedUser) throwException('User not updated', 400);
+
+  //   return updatedUser;
+  // }
+
+  async updateUser(query: any, updateUserDto: UpdateUserDTO) {
+    const updatedUser = await this.userModel.findOneAndUpdate(query, updateUserDto, { new: true });
     if (!updatedUser) throwException('User not updated', 400);
 
     return updatedUser;

@@ -28,9 +28,6 @@ export class User {
   BowlsClub: string;
 
   @Prop()
-  phone: string;
-
-  @Prop()
   image: string;
 
   @Prop()
@@ -56,6 +53,9 @@ export class User {
 
   @Prop({ default: false })
   isDeleted: boolean;
+
+  @Prop()
+  refreshToken: string;
 }
 
 export type UserDocument = User & Document;

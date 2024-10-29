@@ -16,15 +16,38 @@ export class AuthController {
   @Post('/login')
   @UseGuards(AuthGuard('local'))
   login(@Res() res: Response, @GetCurrentUser() user: User) {
+
     const accessToken = this.authService.generateToken(user);
+
+    res.cookie('accessToken', accessToken, { httpOnly: true });
+    res.cookie('refreshToken', user.refreshToken, { httpOnly: true });
     generateResponse({ user, accessToken }, 'Logged in successfully', res);
   }
 
   @Post('/register')
   @UseInterceptors(FileInterceptor('image', multerStorage))
-  async register(@Res() res: Response, @Body() registerUserDto: RegisterUserDTO, @UploadedFile() file: Express.Multer.File,) {
+  async register(@Res() res: Response, @Body() registerUserDto: RegisterUserDTO, @UploadedFile() file: Express.Multer.File) {
+
     const user = await this.userService.create(registerUserDto, file);
     const accessToken = this.authService.generateToken(user);
-    generateResponse({ user, accessToken }, 'Registered successfully', res);
+    const refreshToken = this.authService.generateRefreshToken(user);
+
+    // Save tokens in session
+    res.cookie('accessToken', accessToken, { httpOnly: true });
+    res.cookie('refreshToken', refreshToken, { httpOnly: true });
+
+    await this.userService.updateUser(user._id, { refreshToken });
+    generateResponse({ user, accessToken, refreshToken }, 'Registered successfully', res);
+  }
+
+  @Post('/logout')
+  @UseGuards(AuthGuard('jwt'))
+  async logout(@Res() res: Response, @GetCurrentUser() user: User) {
+
+    // Clear tokens from session
+    res.clearCookie('accessToken');
+    res.clearCookie('refreshToken');
+
+    generateResponse({}, 'Logged out successfully', res);
   }
 }
