@@ -108,7 +108,7 @@ export class UserService {
       { expiresIn: '20m' }
     );
 
-    await sendEmail(email, 'OTP', `Your OTP: ${otp}`);
+    await sendEmail(email, 'Verification Code', `Your OTP Code is: ${otp}`);
     return { otp, tempToken };
   }
 
