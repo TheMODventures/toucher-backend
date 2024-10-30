@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '../database/schema/user.schema';
+import { throwException } from '@src/common/helpers';
 
 @Injectable()
 export class AuthService {
@@ -24,8 +25,13 @@ export class AuthService {
     );
   }
 
-  async invalidateToken(user: User) {
-    //add logut functionality
-
+  verifyTempToken(token: string) {
+    try {
+      const decoded = this.jwtService.verify(token);
+      return decoded;
+    } catch (error) {
+      throwException('Invalid or expired token', 401);
+    }
   }
+
 }

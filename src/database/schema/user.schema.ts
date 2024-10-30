@@ -39,6 +39,9 @@ export class User {
   @Prop()
   otp: string;
 
+  @Prop()
+  otpExpiry: Date;
+
   @Prop({ required: true })
   fcmToken: string;
 
