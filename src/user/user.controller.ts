@@ -23,13 +23,13 @@ import { UpdateUserDTO } from './dto/update-user.dto';
 export class UserController {
   constructor(private readonly userService: UserService) { }
 
-  @Post('/otp')
-  async sendOtp(@Res() res: Response, @Body('email') email: string) {
-    if (!email) throw new UnprocessableEntityException('Email is required');
+  // @Post('/otp')
+  // async sendOtp(@Res() res: Response, @Body('email') email: string) {
+  //   if (!email) throw new UnprocessableEntityException('Email is required');
 
-    const otp = await this.userService.sendOtp(email);
-    generateResponse({ otp }, 'OTP sent successfully', res);
-  }
+  //   const otp = await this.userService.sendOtp(email);
+  //   generateResponse({ otp }, 'OTP sent successfully', res);
+  // }
 
   @Get()
   @UseGuards(AuthGuard('jwt'), RolesGuard)

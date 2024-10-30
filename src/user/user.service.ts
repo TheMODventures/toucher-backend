@@ -4,35 +4,30 @@ import { Model, PaginateModel } from 'mongoose';
 import { comparePassword, generateRandomOTP, generateResponse, hashPassword, throwException } from '@src/common/helpers';
 // import { UpdateUserDTO } from './dto/update-user.dto';
 // import { fetchAllUsers } from './query/user.query';
-import { RegisterUserDTO } from '@src/auth/dto/register.dto';
-import { loginDTO } from '@src/auth/dto/login.dto';
-import { USER_MODEL, UserDocument } from '@src/database/schema/user.schema';
+import { User, USER_MODEL, UserDocument } from '@src/database/schema/user.schema';
 import { sendEmail } from '@src/common/lib/mailer';
 import { GetAggregatedPaginationQueryParams, GetPaginationQueryParams } from '@src/common/interfaces';
 import { getAggregatedPaginatedData, getPaginatedData, PaginatedData } from 'mongoose-pagination-v2';
 import { UpdateUserDTO } from './dto/update-user.dto';
 import { JwtService } from '@nestjs/jwt';
+import { LoginDTO, RegisterDTO, SendOtpDTO } from '@src/auth/dto/auth.dto';
 
 @Injectable()
 export class UserService {
   constructor(@InjectModel(USER_MODEL) private readonly userModel: Model<UserDocument>, private readonly jwtService: JwtService,) { }
 
-  async create(registerUserDto: RegisterUserDTO, file: Express.Multer.File) {
-    try {
-      const userExists = await this.userModel.findOne({ email: registerUserDto.email });
-      if (userExists) throwException('User already exists', 409);
-
-      if (!file) throwException('Image is required', 400);
-      const userPayload = {
-        ...registerUserDto,
-        image: `uploads/${file.filename}`,
-      };
-
-      const user = await this.userModel.create(userPayload);
-      return user;
-    } catch (error) {
-      throwException(error.message, 422);
+  async create(registerDTO: RegisterDTO): Promise<User> {
+    // Check if the user already exists
+    const userExists = await this.userModel.findOne({ email: registerDTO.email });
+    if (userExists) {
+      throwException('User already exists', 409);
     }
+    const hashedPassword = hashPassword(registerDTO.password);
+
+    // Create the user
+    const user = await this.userModel.create({ ...registerDTO, password: hashedPassword });
+    return user; // Return the created user
+
   }
 
   async findOne(query: any) {
@@ -74,64 +69,80 @@ export class UserService {
   //   return deletedUser;
   // }
 
-  async login(loginDto: loginDTO) {
+  async login(loginDto: LoginDTO): Promise<User> {
     const user = await this.userModel.findOne({ email: loginDto.email }, '+password');
-    if (!user) throwException('User not found', 404);
+    if (!user) {
+      throwException('User not found', 404);
+    }
 
+    // Verify password
     const passwordMatch = comparePassword(loginDto.password, user.password);
-    if (!passwordMatch) throwException('Password is incorrect!', 401);
+    if (!passwordMatch) {
+      throwException('Password is incorrect!', 401);
+    }
 
+    // Update FCM token and return updated user
     const updatedUser = await this.userModel.findOneAndUpdate(
       { email: loginDto.email },
       { fcmToken: loginDto.fcmToken },
-      { new: true },
+      { new: true }
     );
+
     return updatedUser;
   }
 
   async uploadImage(userId: string, fileName: string) {
     return await this.userModel.findByIdAndUpdate(userId, { $set: { image: `users/${fileName}` } }, { new: true });
   }
-
-  async sendOtp(email: string) {
+  async sendOtp(sendOtpDto: SendOtpDTO) {
+    // Generate OTP
     const otp = generateRandomOTP();
+    const otpExpiry = new Date(Date.now() + 20 * 60000); // 20 minutes from now
+
+    // Update user with new OTP
     const user = await this.userModel.findOneAndUpdate(
-      { email },
-      { otp, otpExpiry: new Date(Date.now() + 20 * 60000) },
+      { email: sendOtpDto.email },
+      { otp, otpExpiry },
       { new: true }
     );
-    if (!user) throwException('User not found', 404);
 
-    // Generate a temporary token with user ID and email
+    if (!user) throwException('User not found', 404);
+    // Generate temporary token
     const tempToken = this.jwtService.sign(
-      { userId: user._id, email: user.email }, // Include email in payload
+      { userId: user._id, email: user.email },
       { expiresIn: '20m' }
     );
 
-    await sendEmail(email, 'Verification Code', `Your OTP Code is: ${otp}`);
+    // Send email with OTP
+    await sendEmail(sendOtpDto.email, 'Verification Code', `Your OTP Code is: ${otp}`);
     return { otp, tempToken };
   }
 
-  async verifyOtp(userId: string, otp: string, email: string) {
+  async verifyOtp(userId: string, otp: string, email: string): Promise<User> {
+    // Find user with matching ID, email and OTP
     const user = await this.userModel.findOne({ _id: userId, email, otp });
-    if (!user) throwException('Invalid OTP', 400);
 
+    if (!user) throwException('Invalid OTP', 400);
+    // Check if OTP has expired
     if (user.otpExpiry < new Date()) throwException('OTP expired', 400);
 
     return user;
   }
 
-  async resetPassword(userId: string, email: string, password: string) {
+  async resetPassword(userId: string, email: string, password: string): Promise<User> {
     const hashedPassword = hashPassword(password);
+
+    // Update user with new password and clear OTP
     const user = await this.userModel.findOneAndUpdate(
       { _id: userId, email },
-      { password: hashedPassword, otp: '', otpExpiry: null },  // Clear OTP
+      { password: hashedPassword, otp: '', otpExpiry: null },
       { new: true }
     );
-    if (!user) throwException('User not found', 404);
 
+    if (!user) throwException('User not found', 404);
     return user;
   }
+
 
   // findAll with pagination
   async findAll({ query = {}, page = 1, limit = 10, populate }: GetPaginationQueryParams): Promise<PaginatedData<UserDocument>> {
