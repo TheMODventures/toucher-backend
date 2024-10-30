@@ -11,10 +11,11 @@ import { sendEmail } from '@src/common/lib/mailer';
 import { GetAggregatedPaginationQueryParams, GetPaginationQueryParams } from '@src/common/interfaces';
 import { getAggregatedPaginatedData, getPaginatedData, PaginatedData } from 'mongoose-pagination-v2';
 import { UpdateUserDTO } from './dto/update-user.dto';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class UserService {
-  constructor(@InjectModel(USER_MODEL) private readonly userModel: Model<UserDocument>) { }
+  constructor(@InjectModel(USER_MODEL) private readonly userModel: Model<UserDocument>, private readonly jwtService: JwtService,) { }
 
   async create(registerUserDto: RegisterUserDTO, file: Express.Multer.File) {
     try {
@@ -94,13 +95,42 @@ export class UserService {
 
   async sendOtp(email: string) {
     const otp = generateRandomOTP();
-    const user = await this.userModel.findOneAndUpdate({ email }, { $set: { otp } }, { new: true });
+    const user = await this.userModel.findOneAndUpdate(
+      { email },
+      { otp, otpExpiry: new Date(Date.now() + 20 * 60000) },
+      { new: true }
+    );
     if (!user) throwException('User not found', 404);
 
+    // Generate a temporary token with user ID and email
+    const tempToken = this.jwtService.sign(
+      { userId: user._id, email: user.email }, // Include email in payload
+      { expiresIn: '20m' }
+    );
 
-    await sendEmail(email, "OTP", `OTP: ${otp}`);
+    await sendEmail(email, 'OTP', `Your OTP: ${otp}`);
+    return { otp, tempToken };
+  }
 
-    return otp;
+  async verifyOtp(userId: string, otp: string, email: string) {
+    const user = await this.userModel.findOne({ _id: userId, email, otp });
+    if (!user) throwException('Invalid OTP', 400);
+
+    if (user.otpExpiry < new Date()) throwException('OTP expired', 400);
+
+    return user;
+  }
+
+  async resetPassword(userId: string, email: string, password: string) {
+    const hashedPassword = hashPassword(password);
+    const user = await this.userModel.findOneAndUpdate(
+      { _id: userId, email },
+      { password: hashedPassword, otp: '', otpExpiry: null },  // Clear OTP
+      { new: true }
+    );
+    if (!user) throwException('User not found', 404);
+
+    return user;
   }
 
   // findAll with pagination

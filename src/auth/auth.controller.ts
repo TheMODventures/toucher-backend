@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Put, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Post, Put, Res, UploadedFile, UseGuards, UseInterceptors, Headers } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Response } from 'express';
 import { GetCurrentUser } from '@src/common/decorators';
@@ -68,6 +68,52 @@ export class AuthController {
     generateResponse({ user, accessToken }, 'Access token generated successfully', res);
   }
 
+  @Post('/send-otp')
+  async sendOtp(@Res() res: Response, @Body('email') email: string) {
+    if (!email) throwException('Email is required', 400);
+
+    const { otp, tempToken } = await this.userService.sendOtp(email);
+
+    generateResponse({ tempToken, otp }, 'OTP sent successfully', res);
+  }
+
+  @Put('/verify-otp')
+  async verifyOtp(
+    @Res() res: Response,
+    @Body('otp') otp: string,
+    @Headers('Authorization') authorization: string,
+  ) {
+    if (!otp) throwException('OTP is required', 400);
+    if (!authorization) throwException('Authorization token is required', 401);
+
+    const tempToken = authorization.replace('Bearer ', '');
+
+    const { userId, email } = this.authService.verifyTempToken(tempToken);
+    const verifiedUser = await this.userService.verifyOtp(userId, otp, email);
+
+    generateResponse({ user: verifiedUser }, 'OTP verified successfully', res);
+  }
+
+  @Put('/reset-password')
+  async resetPassword(
+    @Res() res: Response,
+    @Body('password') password: string,
+    @Body('confirmPassword') confirmPassword: string,
+    @Headers('Authorization') authHeader: string,
+  ) {
+    if (!password || !confirmPassword || !authHeader) {
+      throwException('Password, confirm password, and token are required', 400);
+    }
+    if (password !== confirmPassword) throwException('Passwords do not match', 400);
+
+    const tempToken = authHeader.replace('Bearer ', '');
+    const { userId, email, exp } = this.authService.verifyTempToken(tempToken);
+    if (Date.now() >= exp * 1000) throwException('Token expired', 401);
+
+    // Reset password
+    const user = await this.userService.resetPassword(userId, email, password);
+    generateResponse({ user }, 'Password reset successfully', res);
+  }
 }
 
 

@@ -39,7 +39,7 @@ export const throwException = (message: string, statusCode: number) => {
 };
 
 export const generateRandomOTP = () => {
-  return Math.floor(Math.random() * 99999999);  // OTP from 0 to 99999999
+  return Math.floor(100000 + Math.random() * 900000);  // 6-digit OTP
 }
 
 export const multerStorage = {
