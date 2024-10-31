@@ -1,23 +1,22 @@
 import {
   Body, Controller, Delete, Get, HttpException, HttpStatus,
   ParseIntPipe, Post, Put, Query, Req, Res,
-  UnprocessableEntityException,
   UploadedFiles, UseFilters, UseGuards, UseInterceptors
 } from '@nestjs/common';
 // import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 // import { diskStorage } from 'multer';
-import { filterImage, generateFilename, generateResponse } from 'src/common/helpers';
+import { filterMedia, generateFilename, generateResponse, uploadMedia } from 'src/common/helpers';
 // import { QueryOption } from 'src/common/interfaces';
 // import { UpdateUserDTO } from './dto/update-user.dto';
 import { UserService } from './user.service';
-import { STATUS_CODES } from 'http';
-import { GetCurrentUserId, Roles } from '@src/common/decorators';
+import { GetCurrentUserId } from '@src/common/decorators';
 import { AuthGuard } from '@nestjs/passport';
-import { ROLES } from '@src/common/constants';
 import { RolesGuard } from '@src/common/guards/roles.guard';
 import { fetchAllUsersQuery } from './query/user.query';
 import { UpdateUserDTO } from './dto/update-user.dto';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
 
 @Controller('user')
 export class UserController {
@@ -97,4 +96,28 @@ export class UserController {
 
   //   // return this.usersService.uploadImage(userId, file.filename);
   // }
+
+  @Post('/upload-media')
+  @UseInterceptors(
+    FilesInterceptor('files', 5, {
+      storage: diskStorage({
+        destination: './uploads/',
+        filename: generateFilename,
+      }),
+      fileFilter: filterMedia,
+      limits: { fileSize: 10 * 1024 * 1024 },  // Max file size of 10MB per file
+    }),
+  )
+  async uploadMedia(
+    @UploadedFiles() files: Express.Multer.File[],
+    @Res() res: Response,
+  ) {
+    if (!files || files.length === 0) {
+      throw new HttpException('Please, provide media files.', 422);
+    }
+    const filePaths = await uploadMedia(files);
+
+    generateResponse(filePaths, 'Media uploaded successfully', res);
+  }
+
 }

@@ -10,7 +10,7 @@ export const hashPassword = (password: string): string => bcrypt.hashSync(passwo
 export const comparePassword = (password: string, hash: string): boolean => bcrypt.compareSync(password, hash);
 
 export const generateFilename = (req: Request, file: any, cb: any) => {
-  cb(null, uuidv4() + '.' + file.originalname.split('.').pop());
+  cb(null, `${uuidv4()}.${file.originalname.split('.').pop()}`);
 };
 
 export const filterImage = (req: Request, file: any, cb: any) => {
@@ -46,3 +46,32 @@ export const multerStorage = {
   storage: diskStorage({ destination: './uploads/', filename: generateFilename }),
   fileFilter: filterImage,
 }
+
+export const filterMedia = (req, file, cb) => {
+  const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  const allowedVideoTypes = ['video/mp4', 'video/mov', 'video/avi'];
+  const allowedDocumentTypes = ['application/pdf'];
+  if (
+    allowedImageTypes.includes(file.mimetype) ||
+    allowedVideoTypes.includes(file.mimetype) ||
+    allowedDocumentTypes.includes(file.mimetype)
+  ) {
+    cb(null, true);
+  } else {
+    cb(new HttpException('Only images, videos, and PDF files are allowed!', 422), false);
+  }
+};
+
+
+export const uploadMedia = async (files: Express.Multer.File[]): Promise<string[]> => {
+  try {
+    const paths = files.map((file) => {
+      return `uploads/${file.filename}`;
+    });
+
+    return paths;
+  } catch (error) {
+    console.error('Error processing uploaded files:', error);
+    throw new Error('File upload failed');
+  }
+};
