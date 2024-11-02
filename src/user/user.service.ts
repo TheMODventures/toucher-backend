@@ -169,4 +169,20 @@ export class UserService {
 
     return { data, pagination };
   }
+
+  //findUserById
+  async findUserById(id: string) {
+    try {
+      const user = await this.userModel.findById(id);
+      console.log(user);
+      if (!user) {
+        console.log(`User not found with ID: ${id}`);
+        return null;
+      }
+      return user;
+    } catch (error) {
+      console.log(`Error finding user by ID: ${error.message}`);
+      return null;
+    }
+  }
 }

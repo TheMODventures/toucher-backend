@@ -12,4 +12,7 @@ export class UpdateUserDTO {
 
   @IsOptional()
   refreshToken: string;
+
+  @IsOptional()
+  accessToken: string;
 }
