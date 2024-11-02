@@ -59,6 +59,9 @@ export class User {
 
   @Prop()
   refreshToken: string;
+
+  @Prop()
+  accessToken: string;
 }
 
 export type UserDocument = User & Document;

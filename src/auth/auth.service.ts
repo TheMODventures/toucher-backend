@@ -25,11 +25,24 @@ export class AuthService {
     );
   }
 
-  verifyTempToken(token: string) {
+  verifyTempToken(token: string): { userId: string; email: string } {
     try {
-      const decoded = this.jwtService.verify(token);
-      return decoded;
+      const decoded = this.jwtService.verify(token, {
+        secret: process.env.JWT_SECRET
+      });
+
+      console.log('Temp token verification:', {
+        decoded,
+        id: decoded.id,
+        email: decoded.email
+      });
+
+      return {
+        userId: decoded.userId,
+        email: decoded.email
+      };
     } catch (error) {
+      console.error('Token verification failed:', error);
       throwException('Invalid or expired token', 401);
     }
   }
