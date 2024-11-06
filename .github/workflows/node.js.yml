@@ -33,3 +33,4 @@ jobs:
             npm install
             npm run build
             pm2 restart apis-toucher
+          debug: true
