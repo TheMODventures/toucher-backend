@@ -29,6 +29,8 @@ jobs:
           username: root
           script: |
             cd /mnt/toucher/toucher-backend
+            echo ${{secrets.SSH_HOST}}
+            echo ${{secrets.SSH_KEY}}
             git pull origin dev
             npm install
             npm run build
