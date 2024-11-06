@@ -26,7 +26,7 @@ jobs:
         with:
           host: ${{secrets.SSH_HOST}}
           key: ${{secrets.SSH_KEY}}
-          username: ${{secrets.SSH_USERNAME}}
+          username: root
           script: |
             cd /mnt/toucher/toucher-backend
             git pull origin dev
